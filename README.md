@@ -319,24 +319,6 @@ Suggested deployment steps:
 
 ---
 
-## Resume & Interview Tips — How to present GoAuthX
-
-- **Project title**: GoAuthX — Authentication & API Platform
-- **One-liner**: Built a production-ready authentication platform with JWT, refresh token rotation, Redis-backed sessions, role-based access control and rate-limiting.
-- **Key highlights to mention**:
-  - Implemented secure JWT auth with refresh token rotation and blacklist on logout.
-  - Used Redis for session and rate-limiting; designed token invalidation strategy.
-  - Dockerized the application; set up GitHub Actions for CI.
-  - Added automated tests and API documentation (Swagger).
-  - Deployed to [your platform], configured managed Postgres and Redis in production.
-- **Interview talking points**:
-  - Explain the refresh-token rotation flow and why it's more secure.
-  - Discuss trade-offs between storing session in Redis vs stateless JWT.
-  - Explain how rate-limiting with Redis works (counters, TTLs).
-  - Talk about scaling decisions: DB pooling, read replicas, caching.
-
----
-
 ## Contributing
 
 Contributions are welcome! Follow these steps:

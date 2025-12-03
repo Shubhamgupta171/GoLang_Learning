@@ -1,473 +1,362 @@
 
-# GoLang (Golang) – Full Step-by-Step Learning Guide & Project Development Roadmap
+# GoAuthX
 
-Go ek fast, simple aur powerful backend programming language hai.  
-Ye README specially beginners ke liye banaya gaya hai jo **Go + Backend + Production API Development** ekdum step-by-step seekhna chahte hain.
-
-Isme do main parts hain:
-
-1. **GoLang Learning Guide (Basics → Advanced)**  
-2. **Project Development Roadmap (Daily Step-by-Step Feature Building)**  
+> **GoAuthX** — Production-ready Authentication & User Management Backend (SaaS)  
+> Build secure, scalable APIs with Go, Gin, SQLite/Postgres, Redis, JWT, Docker, and CI/CD.  
+> This repository contains a complete learning roadmap, daily feature plan, and a production-grade feature set you can iterate on.
 
 ---
 
-# =============================
-# PART 1: GoLang Learning Guide  
-# =============================
+## Table of Contents
+- [Project Overview](#project-overview)
+- [Why GoAuthX?](#why-goauthx)
+- [Tech Stack](#tech-stack)
+- [Key Features (Out-of-the-box)](#key-features-out-of-the-box)
+- [Architecture (textual)](#architecture-textual)
+- [Quick Start (Local)](#quick-start-local)
+- [Environment Variables](#environment-variables)
+- [Run with Docker (Recommended)](#run-with-docker-recommended)
+- [API Endpoints (Core)](#api-endpoints-core)
+- [Database Migrations & Models](#database-migrations--models)
+- [Daily Improvement Roadmap (30 days)](#daily-improvement-roadmap-30-days)
+- [Advanced Features to Add (SaaS-ready)](#advanced-features-to-add-saas-ready)
+- [Testing & CI/CD](#testing--cicd)
+- [Deployment](#deployment)
+- [Security Checklist](#security-checklist)
+- [Resume & Interview Tips (How to present GoAuthX)](#resume--interview-tips-how-to-present-goauthx)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 1. Install & Setup GoLang
+---
 
-### Mac (Homebrew)
-```
-brew install go
+## Project Overview
+
+**GoAuthX** is a single-repo, production-oriented backend template and learning project that evolves into a SaaS Authentication & User Management platform.  
+Start small (SQLite + Gin + Redis + JWT) and progressively add features to make it enterprise-ready: multi-tenant support, API keys, analytics, webhooks, and more.
+
+This README serves two purposes:
+1. A developer learning guide (daily tasks + examples).
+2. A project growth playbook to convert your repo into a robust SaaS backend.
+
+---
+
+## Why GoAuthX?
+
+- Real-world: Implements authentication best practices, token rotation, Redis session store, role-based access control.
+- Extensible: Designed to be extended into a full API platform or integrated into other microservices.
+- Resume-friendly: Demonstrates security, scalability, CI/CD, and deployment skills.
+
+---
+
+## Tech Stack
+
+- Language: **Go (>=1.20)**
+- Web framework: **Gin**
+- ORM: **GORM** (SQLite for dev, Postgres for production)
+- Cache / Session store: **Redis**
+- Authentication: **JWT** (access tokens) + Refresh tokens
+- Containerization: **Docker / Docker Compose**
+- Docs: **Swagger / OpenAPI**
+- CI/CD: **GitHub Actions**
+- Optional: **Nginx** (reverse proxy), **Prometheus/Grafana** (metrics), **Sentry** (error monitoring)
+
+---
+
+## Key Features (Out-of-the-box)
+
+- Register / Login (hashed passwords using bcrypt)
+- JWT-based access tokens + Refresh token rotation stored in Redis
+- Token blacklist on logout
+- Role-Based Access Control (admin, user, manager)
+- Email OTP verification flow (Redis TTL based)
+- Rate-limiting for sensitive endpoints (login) using Redis
+- Basic user CRUD and profile endpoints
+- File upload support (profile picture) — metadata in DB
+- Basic request logging middleware
+- Health check endpoint for readiness & liveness
+
+---
+
+## Architecture (textual)
+
+Client (Web/Mobile)  
+→ Reverse Proxy (optional: Nginx)  
+→ GoAuthX API (Gin)  
+  - Auth Service (JWT, OTP, Refresh tokens)  
+  - User Service (CRUD, profile)  
+  - Admin endpoints (user management)  
+  - Background worker (email, cleanup)  
+  - Redis (token store, rate-limit, cache)  
+  - DB (SQLite dev / Postgres production)  
+
+---
+
+## Quick Start (Local)
+
+> Development setup uses SQLite and local Redis for simplicity.
+
+### Prerequisites
+- Go (1.20+) installed
+- Redis running locally (`redis-server`)
+- Git
+- Docker (optional but recommended)
+
+### Clone
+```bash
+git clone https://github.com/your-username/goauthx.git
+cd goauthx
 ```
 
-### ✔ Version Check
+### Local env
+Create `.env` in project root (see [Environment Variables](#environment-variables)).
+
+### Run
+```bash
+go run ./cmd/server
 ```
-go version
+
+Open: `http://localhost:8080/health`
+
+---
+
+## Environment Variables
+
+Create `.env` with (example):
+```env
+PORT=8080
+GIN_MODE=debug
+
+# Database
+DB_DRIVER=sqlite           # or "postgres"
+DB_DSN=goauthx.db          # or "host=... user=... password=... dbname=... sslmode=disable"
+
+# Redis
+REDIS_ADDR=localhost:6379
+REDIS_PASS=
+REDIS_DB=0
+
+# JWT
+JWT_SECRET=replace_with_strong_secret
+JWT_EXP=15m
+REFRESH_TOKEN_EXP=168h
+
+# Email (SMTP) - optional
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=you@example.com
+SMTP_PASS=yourpassword
+
+# Other
+APP_ENV=development
 ```
 
 ---
 
-## 2. Hello World Program
+## Run with Docker (Recommended)
 
-`main.go`
-```go
-package main
-import "fmt"
+`Dockerfile` (example) and `docker-compose.yml` are provided in repo.
 
-func main() {
-    fmt.Println("Hello Go!")
-}
+Start locally with Docker Compose:
+```bash
+docker compose up --build
 ```
 
-### Run Program
-```
-go run main.go
-```
-
-### Build Executable
-```
-go build main.go
-./main
-```
+Services launched:
+- goauthx (app)
+- redis
+- db (optional Postgres image)
+- maildev (optional SMTP dev server)
 
 ---
 
-## 3. GoLang Basics
+## API Endpoints (Core)
 
-### Variables
-```go
-var a int = 10
-b := 20
-```
+**Auth**
+- `POST /auth/register` — Register new user  
+  Body: `{ "username","email","password" }`
+- `POST /auth/login` — Login (returns access + refresh tokens)  
+- `POST /auth/refresh` — Rotate refresh token, issue new access token  
+- `POST /auth/logout` — Invalidate refresh token + blacklist access token  
+- `POST /auth/send-otp` — Send email OTP  
+- `POST /auth/verify-otp` — Verify OTP
 
-### Data Types  
-- int  
-- float64  
-- string  
-- bool  
+**Users**
+- `GET /profile` — Get current user (protected)
+- `PUT /profile` — Update profile (protected)
+- `GET /admin/users` — List users (admin)
+- `GET /admin/users/:id`
+- `PUT /admin/users/:id`
+- `DELETE /admin/users/:id`
 
-### Conditions
-```go
-if a > 10 { ... } else { ... }
-```
-
-### Loops (Only `for`)
-```go
-for i := 0; i < 5; i++ { ... }
-```
-
----
-
-## 4. Functions in Go
-
-```go
-func add(a int, b int) int {
-    return a + b
-}
-```
-
-### Multiple Returns
-```go
-func divide(a, b float64) (float64, error) {
-    if b == 0 {
-        return 0, fmt.Errorf("division by zero")
-    }
-    return a / b, nil
-}
-```
+**Utilities**
+- `GET /health` — return `{status: "ok"}`
+- `GET /swagger/*` — API docs (when enabled)
 
 ---
 
-## 5. Structs and Methods
+## Database Migrations & Models
 
+Start with simple models:
 ```go
 type User struct {
-    ID   int
-    Name string
+    ID        uint   `gorm:"primaryKey"`
+    Username  string `gorm:"uniqueIndex;not null"`
+    Email     string `gorm:"uniqueIndex;not null"`
+    Password  string `gorm:"not null"`
+    Role      string `gorm:"default:user"`
+    AvatarURL string
+    CreatedAt time.Time
+    UpdatedAt time.Time
 }
 ```
 
----
-
-## 6. Slices & Maps
-
-### Slice
+Auto-migrate at startup:
 ```go
-nums := []int{1,2,3}
+db.AutoMigrate(&User{}, &OtherModels...)
 ```
 
-### Map
-```go
-scores := map[string]int{"A": 10}
-```
+Migrate to Postgres before production. Keep migrations deterministic (use goose / golang-migrate if needed).
 
 ---
 
-## 7. Pointers
+## Daily Improvement Roadmap (30 Days)
 
-```go
-x := 10
-p := &x
-*p = 20
-```
+This is a **practical daily checklist** you can follow — complete one task per day and push progress to GitHub.
 
----
+### Week 1 — Core Auth & Project Setup
+- Day 1: Project skeleton, health route, env config
+- Day 2: User model, DB connection, auto-migrate
+- Day 3: Register endpoint (password hashing)
+- Day 4: Login endpoint (JWT issue)
+- Day 5: Protected `/profile` route with auth middleware
+- Day 6: Refresh token endpoint + Redis store
+- Day 7: Logout (blacklist token), basic tests
 
-## 8. Interfaces (Polymorphism)
+### Week 2 — Security & Quality
+- Day 8: Rate limiting (login attempts) with Redis
+- Day 9: Email OTP verification flow
+- Day 10: Role-based access middleware (admin)
+- Day 11: Pagination & search for user list
+- Day 12: File upload (profile image)
+- Day 13: Input validation & structured error responses
+- Day 14: Add unit tests for auth service
 
-```go
-type Speaker interface {
-    Speak() string
-}
-```
+### Week 3 — Observability & Reliability
+- Day 15: Logging with Zap / Zerolog
+- Day 16: Metrics endpoint (Prometheus instrumentation)
+- Day 17: Background worker (goroutine + queue) for emails
+- Day 18: Webhooks: allow apps to register a webhook URL
+- Day 19: API keys system for developers (scoped permissions)
+- Day 20: Improve refresh token rotation & secure storage
+- Day 21: Integration tests & test coverage
 
----
-
-## 9. Concurrency (Goroutines + Channels)
-
-### Goroutine
-```go
-go func(){ fmt.Println("Hi") }()
-```
-
-### Channel
-```go
-ch := make(chan int)
-```
-
-### Select
-```go
-select { case <-ch: ... }
-```
-
----
-
-## 10. Simple API (net/http)
-
-```go
-http.HandleFunc("/hello", ...)
-```
+### Week 4 — Production & SaaS Features
+- Day 22: Dockerize & docker-compose
+- Day 23: Swagger docs & API versioning
+- Day 24: CI pipeline (GitHub Actions)
+- Day 25: Deploy to platform (Render / Railway / DigitalOcean)
+- Day 26: Multi-tenant / Organization support
+- Day 27: Websocket or realtime notifications (optional)
+- Day 28: Billing hooks & Stripe integration (optional)
+- Day 29: Security audit & common vulnerability fixes
+- Day 30: Polish README, demo, and portfolio entry
 
 ---
 
-## 11. Using Gin Framework
+## Advanced Features to Add (Make it SaaS-ready)
 
-Install:
-```
-go get github.com/gin-gonic/gin
-```
-
-Example:
-```go
-r := gin.Default()
-r.GET("/ping", func(c *gin.Context){
-    c.JSON(200, gin.H{"message": "pong"})
-})
-r.Run(":8080")
-```
+- Multi-tenant organizations with per-org billing
+- API keys + scopes + rate limits per key
+- OAuth2 provider support (social login)
+- Admin dashboard (React/NextJS) - account management
+- Audit logs (immutable event store)
+- Role/permission management UI
+- Usage analytics and billing reports
+- License keys and plan enforcement
+- CSRF protection for browser flows
+- Sentry integration for error tracking
+- Secrets management for keys (Vault)
 
 ---
 
-## 12. Database (PostgreSQL)
+## Testing & CI/CD
 
-Install driver:
-```
-go get github.com/lib/pq
-```
-
-Connect:
-```go
-db, _ := sql.Open("postgres", "postgres://user:pass@localhost/db?sslmode=disable")
-```
-
----
-
-## 13. Testing in Go
-
-```go
-func TestAdd(t *testing.T){
-    if Add(2,3) != 5 {
-        t.Fail()
-    }
-}
-```
+- Unit tests for services (Golang `testing`)
+- Integration tests using testcontainers (Postgres/Redis)
+- Linting: `golangci-lint`
+- GitHub Actions:
+  - Run tests
+  - Run linters
+  - Build Docker image
+  - Push to registry (optional)
+  - Deploy to staging on merge
 
 ---
 
-## 14. Recommended Folder Structure
+## Deployment
 
-```
-project/
-  cmd/
-  internal/
-  pkg/
-  go.mod
-  README.md
-```
+**Staging**: Use Docker Compose or cloud service (Railway, Render, Fly.io)  
+**Production**: Use managed Postgres, managed Redis. Use environment secrets rather than `.env`.
 
----
-
-## 15. Practice Projects
-
-### Beginner:
-- CLI Calculator  
-- TODO CLI app  
-
-### Intermediate:
-- CRUD API  
-- JWT Authentication  
-- URL Shortener  
-
-### Advanced:
-- API Gateway  
-- Microservices  
-- WebSocket Chat  
+Suggested deployment steps:
+1. Build Docker image (`docker build -t goauthx:latest .`)
+2. Push to registry
+3. Update service on host or platform
+4. Use migrations on startup or run separately
 
 ---
 
-## 16. 4-Week GoLang Learning Roadmap  
+## Security Checklist (must-follow before production)
 
-### Week 1:
-Basics, loops, slices, maps  
-
-### Week 2:
-Functions, structs, interfaces  
-
-### Week 3:
-Concurrency (goroutines + channels)  
-
-### Week 4:
-REST API + PostgreSQL + JWT Auth  
+- Use HTTPS; terminate TLS at proxy or load balancer
+- Rotate JWT secret and use env secrets
+- Set proper CORS policy (whitelist origins)
+- Restrict trusted proxies instead of trusting all
+- Use secure cookie flags if cookies used (HttpOnly, Secure, SameSite)
+- Rate-limit sensitive endpoints
+- Secret scanning and vault storage
+- Regular dependency audits
 
 ---
 
-# =============================
-# PART 2: Step-by-Step Learning + Project Feature Build Plan  
-# =============================
+## Resume & Interview Tips — How to present GoAuthX
 
-Ye roadmap aapko **daily learning + daily project feature building** me help karega.  
-Isse aap 30 days me **Go backend developer + production-ready API** build kar loge.
-
----
-
-# WEEK 1 — Go Basics + Initial Project Structure
-
-## **Day 1 — Install Go + Build First API**
-**Learn:** go run, go build  
-**Project:**  
-- `/health` route return `{status:"ok"}`  
-
----
-
-## **Day 2 — Variables + Structs**
-**Learn:** Variables, functions  
-**Project:**  
-- `/info` static API  
-- Make `User` struct  
+- **Project title**: GoAuthX — Authentication & API Platform
+- **One-liner**: Built a production-ready authentication platform with JWT, refresh token rotation, Redis-backed sessions, role-based access control and rate-limiting.
+- **Key highlights to mention**:
+  - Implemented secure JWT auth with refresh token rotation and blacklist on logout.
+  - Used Redis for session and rate-limiting; designed token invalidation strategy.
+  - Dockerized the application; set up GitHub Actions for CI.
+  - Added automated tests and API documentation (Swagger).
+  - Deployed to [your platform], configured managed Postgres and Redis in production.
+- **Interview talking points**:
+  - Explain the refresh-token rotation flow and why it's more secure.
+  - Discuss trade-offs between storing session in Redis vs stateless JWT.
+  - Explain how rate-limiting with Redis works (counters, TTLs).
+  - Talk about scaling decisions: DB pooling, read replicas, caching.
 
 ---
 
-## **Day 3 — Slices, Maps**
-**Learn:** Slices, maps  
-**Project:**  
-- `/users` => return user list  
+## Contributing
+
+Contributions are welcome! Follow these steps:
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feat/your-feature`)
+3. Add tests
+4. Open a PR with a clear description
+
+Please follow code style, tests, and commit message conventions.
 
 ---
 
-## **Day 4 — Interfaces + Folder Structure**
-**Learn:** Interfaces  
-**Project:**  
-- Move logic → `services/`  
-- Move routes → `handlers/`  
+## License
+
+This project is released under the MIT License. See `LICENSE` for details.
 
 ---
 
-## **Day 5 — Middlewares**
-**Learn:** custom middleware  
-**Project:**  
-- Logging middleware  
-- Execution time middleware  
+## Final Notes
 
----
+GoAuthX is intentionally modular — start small and iterate daily. Use the 30-day roadmap to keep steady progress and push frequent commits (daily). Each completed day's task becomes an incremental improvement you can show on your resume and GitHub.
 
-## **Day 6 — .env Config**
-**Learn:** godotenv  
-**Project:**  
-- PORT & DB URL `.env` me rakho  
-
----
-
-## **Day 7 — Refactoring**
-Project cleanup
-
----
-
-# WEEK 2 — Database + Authentication System
-
-## **Day 8 — Database Setup**
-**Learn:** SQL basics  
-**Project:**  
-- Connect SQLite/PostgreSQL  
-- `users` table create  
-
----
-
-## **Day 9 — CRUD API**
-**Learn:** SQL queries  
-**Project:**  
-- Create, Get, Update, Delete  
-
----
-
-## **Day 10 — Password Hashing**
-**Learn:** bcrypt  
-**Project:**  
-- Hash password before saving  
-
----
-
-## **Day 11 — JWT Authentication**
-**Learn:** JWT sign/verify  
-**Project:**  
-- `/login` => return JWT  
-
----
-
-## **Day 12 — Protected Routes**
-**Learn:** Auth middleware  
-**Project:**  
-- `/profile` protected route  
-
----
-
-## **Day 13 — Refresh Token**
-**Project:**  
-- `/auth/refresh`  
-
----
-
-## **Day 14 — Cleanup**
-Authentication service improvements.
-
----
-
-# WEEK 3 — Advanced Backend Features
-
-## **Day 15 — Redis Cache**
-**Learn:** Redis client  
-**Project:**  
-- Cache `/users` list  
-
----
-
-## **Day 16 — Rate Limiting**
-**Learn:** Token bucket  
-**Project:**  
-- Limit login attempts  
-
----
-
-## **Day 17 — Token Blacklist**
-**Project:**  
-- `/logout` => invalidate JWT  
-
----
-
-## **Day 18 — Pagination**
-**Project:**  
-- `/users?page=&limit=`  
-
----
-
-## **Day 19 — Goroutines**
-**Project:**  
-- Background job (send email)  
-
----
-
-## **Day 20 — File Upload**
-**Project:**  
-- `/upload/profile`  
-
----
-
-## **Day 21 — Search Feature**
-**Project:**  
-- `/users/search?q=`  
-
----
-
-# WEEK 4 — Production Ready API
-
-## **Day 22 — Unit Tests**
-**Project:**  
-- Test user + auth services  
-
----
-
-## **Day 23 — Logging**
-**Project:**  
-- Add Zerolog / Zap  
-
----
-
-## **Day 24 — Config System**
-Yaml/JSON config loader
-
----
-
-## **Day 25 — Docker**
-**Project:**  
-- Dockerfile + docker-compose  
-
----
-
-## **Day 26 — Swagger Docs**
-**Project:**  
-- `/docs` auto API UI  
-
----
-
-## **Day 27 — CI/CD**
-GitHub Actions workflow
-
----
-
-## **Day 28 — Deployment**
-Deploy on Render/Railway/AWS
-
----
-
-# Final Result
-
-Agar aap ye README follow karte ho toh:
-
-✔ Aap **Go backend developer** ban jaoge  
-✔ Aapka project **production-ready** ho jayega  
-✔ Aap Go + DB + Redis + Auth + Docker + CI/CD sab master kar loge  
-
----
-
-# 💛 Happy Coding & Learning GoLang!
+Happy building! 🚀
